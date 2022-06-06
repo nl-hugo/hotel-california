@@ -1,0 +1,60 @@
+﻿EVALUATE
+VAR BoekingenSelectie = 
+//	FILTER ( Boekingen, Boekingen[Boekingsnummer] = 20272 )
+	Boekingen
+
+VAR BoekingenLong = 
+	UNION (
+		SELECTCOLUMNS(
+			BoekingenSelectie,
+			[Boekingsnummer],
+			[Datum Check in],
+			[Datum Check out],
+			"Gast", [Gast 1],
+			[Kamernummer]
+		),
+		SELECTCOLUMNS(
+			BoekingenSelectie,
+			[Boekingsnummer],
+			[Datum Check in],
+			[Datum Check out],
+			[Gast 2],
+			[Kamernummer]
+		),
+		SELECTCOLUMNS(
+			BoekingenSelectie,
+			[Boekingsnummer],
+			[Datum Check in],
+			[Datum Check out],
+			[Gast 3],
+			[Kamernummer]
+		)
+	)
+
+VAR BoekingenPerGast = 
+	FILTER ( 
+		BoekingenLong,
+		LEN ( [Gast] ) > 0
+	)
+
+VAR CartesischProduct = 
+	CROSSJOIN ( BoekingenPerGast, Datum )
+
+VAR CartesischProductFilter = 
+	FILTER(
+		CartesischProduct,
+		[Datum] >= [Datum Check in] &&
+		[Datum] < [Datum Check out] // check out datum exclusief
+	)
+
+VAR Result = 
+	SELECTCOLUMNS(
+		CartesischProductFilter,
+		"Boekingsnummer", [Boekingsnummer],
+		"Datum", [Datum],
+		[Gast],
+		"Kamernummer", [Kamernummer]
+	)
+
+RETURN 
+	Result

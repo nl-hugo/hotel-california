@@ -1,0 +1,63 @@
+﻿﻿// Hotel California.pbix
+
+
+// Measures
+Aantal boekingen = DISTINCTCOUNT ( Verblijfsdagen[Boekingsnummer] )
+
+Aantal gasten = DISTINCTCOUNT ( Verblijfsdagen[Gast] )
+
+Verblijfsduur = DISTINCTCOUNT ( Verblijfsdagen[Datum] )
+
+
+Is dubbel = 
+VAR VerblijfsdagenPerGast = 
+    ADDCOLUMNS(
+        Artiest,
+        "Verschil", CALCULATE ( COUNTROWS(Verblijfsdagen) - [Verblijfsduur] )
+    )
+VAR Result = 
+    FILTER ( VerblijfsdagenPerGast, [Verschil] )
+RETURN
+    COUNTROWS ( Result )
+
+
+Verblijfsduur (gem per boeking) = 
+// NB. telt alleen boekingen mee met een verblijfsduur > 0
+// dus: filteren op 2021 telt geen boekingen mee met een checkout datum voor 2021 of 
+//      een checkin datum na 2021, want dan zijn er geen verblijfsdagen in 2021.
+VAR Result =
+    AVERAGEX (
+        Artiest, 
+        DIVIDE ( [Verblijfsduur], [Aantal boekingen] )
+    )
+RETURN
+    Result
+    
+
+Maximale capaciteit = 
+VAR FirstVisibleDate = MIN ( Datum[Datum] )
+VAR LastVisibleDate = MAX ( Datum[Datum] )
+VAR AantalDagen = DATEDIFF ( FirstVisibleDate, LastVisibleDate, DAY ) + 1
+VAR AantalBedden = 
+    ADDCOLUMNS (
+        Kamer,
+        "Capaciteit", SWITCH ( 
+            Kamer[Soort Kamer], 
+            "Eenpersoons", 1,
+            "Tweepersoons", 2,
+            "Driepersoons", 3
+        ) * AantalDagen
+    )
+VAR Result = 
+    SUMX ( AantalBedden, [Capaciteit] )
+RETURN
+    Result
+
+
+Bezettingsgraad (%) = 
+VAR TotaalBezet = SUMX ( Datum, [Aantal gasten] * [Verblijfsduur] )
+VAR TotaalCapaciteit = SUMX ( Datum, [Maximale capaciteit]) 
+VAR Result = DIVIDE ( TotaalBezet, TotaalCapaciteit )
+RETURN
+    Result
+   
